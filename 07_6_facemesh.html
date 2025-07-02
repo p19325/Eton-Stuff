@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FaceMesh Webcam Face Landmarks</title>
+  <!-- Load p5.js -->
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.4.0/lib/p5.min.js"></script>
+  <!-- Load TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
+  <!-- Load FaceMesh model -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/facemesh@0.0.4/dist/facemesh.min.js"></script>
+</head>
+
+<body>
+  <script>
+    let video;
+    let facemeshModel;
+    let predictions;
+
+    function setup() {
+      createCanvas(640, 480);
+      video = createCapture(VIDEO);
+      video.size(640, 480);
+      video.hide();
+      loadFaceMeshModel();
+    }
+
+    async function loadFaceMeshModel() {
+      facemeshModel = await facemesh.load();
+      console.log('FaceMesh model loaded.');
+      setInterval(detectFaces, 50); 
+    }
+
+    async function detectFaces() {
+      if (facemeshModel && video.elt.readyState === 4) {
+        const predictionsData = await facemeshModel.estimateFaces(video.elt);
+        predictions = predictionsData;
+      }
+    }
+
+    function draw() {
+      background(0);
+      image(video, 0, 0, width, height);
+
+      if (predictions === undefined) {
+        fill(255);
+        textSize(16);
+        text('Loading model...', 10, 20);
+      } else if (predictions.length > 0) {
+        for (let i = 0; i < predictions.length; i++) {
+          const keypoints = predictions[i].scaledMesh;
+
+          fill(144, 238, 144); 
+          noStroke();
+          for (let j = 0; j < keypoints.length; j++) {
+            const [x, y] = keypoints[j];
+            ellipse(x, y, 4, 4);
+          }
+        }
+      } else {
+        fill(255);
+        textSize(16);
+        text('No face detected', 10, 20);
+      }
+    }
+  </script>
+</body>
+</html>

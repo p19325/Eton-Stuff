@@ -1,0 +1,90 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MoveNet Lightning – Webcam Pose Detection</title>
+  <!-- Load p5.js -->
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.4.0/lib/p5.min.js"></script>
+  <!-- Load TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
+  <!-- Load Pose Detection model (MoveNet) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
+</head>
+<body>
+  <script>
+    let video;
+    let detector;
+    let poses = [];
+const connections = [
+  // Torso
+  [11, 12], [5, 6], [5, 11], [6, 12],
+  // Left arm
+  [5, 7], [7, 9],
+  // Right arm
+  [6, 8], [8, 10],
+  // Left leg
+  [11, 13], [13, 15],
+  // Right leg
+  [12, 14], [14, 16],
+  // Head/eyes (optional)
+  [0, 1], [0, 2], [1, 3], [2, 4]
+];
+
+function setup() {
+  createCanvas(640, 480);
+  video = createCapture(VIDEO);
+  video.size(640, 480);
+  video.hide();
+  loadMoveNet();
+}
+
+async function loadMoveNet() {
+  const model = poseDetection.SupportedModels.MoveNet;
+  const detectorConfig = { enableSmoothing: true };
+  detector = await poseDetection.createDetector(model, detectorConfig);
+  console.log("MoveNet detector loaded.");
+  setInterval(detectPose, 50);
+}
+
+async function detectPose() {
+  if (detector && video.elt.readyState === 4) {
+    const results = await detector.estimatePoses(video.elt, { flipHorizontal: false });
+    poses = results;
+  }
+}
+
+function draw() {
+  background(0);
+  image(video, 0, 0, width, height);
+
+  if (!poses || poses.length === 0) {
+    fill(255);
+    textSize(16);
+    text("Loading model…", 10, 20);
+    return;
+  }
+
+  for (const pose of poses) {
+    const keypoints = pose.keypoints;
+
+    stroke(144, 238, 144);
+    strokeWeight(2);
+    for (const [a, b] of connections) {
+      if (keypoints[a].score > 0.3 && keypoints[b].score > 0.3) {
+        line(keypoints[a].x, keypoints[a].y, keypoints[b].x, keypoints[b].y);
+      }
+    }
+
+    fill(144, 238, 144);
+    noStroke();
+    for (const kp of keypoints) {
+      if (kp.score > 0.3) {
+        ellipse(kp.x, kp.y, 8, 8);
+      }
+    }
+  }
+}
+
+  </script>
+</body>
+</html>

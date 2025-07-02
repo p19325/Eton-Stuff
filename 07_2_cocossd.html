@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CocoSSD Webcam Object Detection</title>
+  <!-- Load p5.js -->
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.4.0/lib/p5.min.js"></script>
+  <!-- Load TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
+  <!-- Load CocoSSD model -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
+</head>
+
+<body>
+  <script>
+    let video;
+    let cocoModel;
+    let detections = [];
+
+    function setup() {
+      createCanvas(640, 480);
+      video = createCapture(VIDEO);
+      video.size(640, 480);
+      video.hide();
+      loadCocoModel();
+    }
+
+    async function loadCocoModel() {
+      cocoModel = await cocoSsd.load();
+      console.log('CocoSSD model loaded.');
+      setInterval(detectVideo, 200); 
+    }
+
+    async function detectVideo() {
+      if (cocoModel && video.elt.readyState === 4) {
+        const results = await cocoModel.detect(video.elt);
+        detections = results;
+      }
+    }
+
+    function draw() {
+      background(0);
+      image(video, 0, 0, width, height);
+      if (detections.length > 0) {
+        for (let i = 0; i < detections.length; i++) {
+          let object = detections[i];
+          let x = object.bbox[0];
+          let y = object.bbox[1];
+          let w = object.bbox[2];
+          let h = object.bbox[3];
+          noFill();
+          stroke(0, 255, 0);
+          strokeWeight(2);
+          rect(x, y, w, h);
+          noStroke();
+          fill(255);
+          textSize(16);
+          text(`${object.class} (${(object.score * 100).toFixed(1)}%)`, x + 5, y + 20);
+        }
+      } else {
+        fill(255);
+        textSize(16);
+        text('Loading model...', 10, 20);
+      }
+    }
+  </script>
+</body>
+</html>

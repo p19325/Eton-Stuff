@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BlazeFace Webcam Face Landmarks</title>
+  <!-- Load p5.js -->
+  <script src="https://cdn.jsdelivr.net/npm/p5@1.4.0/lib/p5.min.js"></script>
+  <!-- Load TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
+  <!-- Load BlazeFace model -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js"></script>
+</head>
+
+<body>
+  <script>
+    let video;
+    let blazeModel;
+    let faces;
+
+    function setup() {
+      createCanvas(640, 480);
+      video = createCapture(VIDEO);
+      video.size(640, 480);
+      video.hide();
+      loadBlazeFaceModel();
+    }
+
+    async function loadBlazeFaceModel() {
+      blazeModel = await blazeface.load();
+      console.log('BlazeFace model loaded.');
+      setInterval(detectFaces, 200); 
+    }
+
+    async function detectFaces() {
+      if (blazeModel && video.elt.readyState === 4) {
+        const returnTensors = false; 
+        const predictions = await blazeModel.estimateFaces(video.elt, returnTensors);
+        faces = predictions;
+      }
+    }
+
+    function draw() {
+      background(0);
+      image(video, 0, 0, width, height);
+
+      if (faces === undefined) {
+        fill(255);
+        textSize(16);
+        text('Loading model...', 10, 20);
+      } else if (faces.length > 0) {
+        for (let i = 0; i < faces.length; i++) {
+          const face = faces[i];
+          const landmarks = face.landmarks;
+
+          fill(144, 238, 144);
+          noStroke();
+          for (let j = 0; j < landmarks.length; j++) {
+            const [lx, ly] = landmarks[j];
+            ellipse(lx, ly, 8, 8);
+          }
+        }
+      } else {
+        fill(255);
+        textSize(16);
+        text('No face detected', 10, 20);
+      }
+    }
+  </script>
+</body>
+
+</html>

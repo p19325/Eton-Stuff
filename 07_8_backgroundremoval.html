@@ -1,0 +1,73 @@
+  <!DOCTYPE html><html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MediaPipe SelfieSegmentation - Background Removal</title>
+    <!-- p5.js -->
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.4.0/lib/p5.min.js"></script>
+    <!-- TensorFlow.js core + WebGL backend (bundled) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
+    <!-- Body‑Segmentation API (includes helpers like toBinaryMask/drawMask) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-segmentation@1.0.2/dist/body-segmentation.min.js"></script>
+    <!-- MediaPipe runtime assets for Selfie Segmentation -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js"></script>
+  </head>
+  <body>
+    <script>
+      let video;
+      let segmenter;
+      let maskImage = null;   
+      const POLL_MS = 50;     
+
+  function setup() {
+    createCanvas(640, 480);
+    video = createCapture(VIDEO);
+    video.size(640, 480);
+    video.hide();
+    loadSelfieSegmentation();
+  }
+
+  async function loadSelfieSegmentation() {
+    const model = bodySegmentation.SupportedModels.MediaPipeSelfieSegmentation;
+    const config = {
+      runtime: 'mediapipe',                      
+      solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747',
+      modelType: 'general'                       
+    };
+    segmenter = await bodySegmentation.createSegmenter(model, config);
+    console.log('SelfieSegmentation loaded');
+    setInterval(runSegmentation, POLL_MS);
+  }
+
+  async function runSegmentation() {
+    if (!segmenter || video.elt.readyState !== 4) return;
+
+    let people = await segmenter.segmentPeople(video.elt, { flipHorizontal: false });
+    if (!people || people.length === 0) return;
+
+    const backgroundColor = { r: 64, g: 0, b: 0, a: 192 };
+    const foregroundColor = { r: 0, g: 255, b: 0, a: 64 };
+    const foregroundThreshold = 0.5;
+
+    maskImage = await bodySegmentation.toBinaryMask(people, foregroundColor, backgroundColor, false, foregroundThreshold);
+  }
+
+  function draw() {
+    background(0, 0, 0);
+
+    if (!maskImage) {
+      fill(255, 255, 255);
+      noStroke();
+      textSize(18);
+      text('Loading model…', 10, 25);
+      return;
+    }
+
+    const blurSize = 2.0;
+    const canvasEl = document.getElementById('defaultCanvas0');
+    bodySegmentation.drawMask(canvasEl, video.elt, maskImage, 1.0, blurSize);
+  }
+
+    </script>
+  </body>
+  </html>
